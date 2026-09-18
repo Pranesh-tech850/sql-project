@@ -8,8 +8,7 @@ import Balance from "./components/Balance";
 // ======================================================
 
 const API_URL = (
-  import.meta.env.VITE_API_URL ||
-  "http://localhost:5000"
+  import.meta.env.VITE_API_URL
 ).replace(/\/$/, "");
 
 
@@ -1393,35 +1392,28 @@ function Orders() {
   // FETCH ALL ORDERS
   // ======================================================
 
-  const fetchOrders = async () => {
+ const fetchOrders = async () => {
+  try {
+    const response = await fetch(`${API_URL}/orderss`);
 
-    try {
+    if (!response.ok) {
+      const errorData = await response.json();
 
-      const response = await fetch(
-        `${API_URL}/orderss`
+      throw new Error(
+        errorData.error || `HTTP error: ${response.status}`
       );
-
-      if (!response.ok) {
-        throw new Error(
-          "Failed to fetch orders"
-        );
-      }
-
-      const data =
-        await response.json();
-
-      setOrders(data.orders);
-
-    } catch (error) {
-
-      console.error(
-        "Error fetching orders:",
-        error
-      );
-
     }
 
-  };
+    const data = await response.json();
+
+    console.log("Orders response:", data);
+
+    setOrders(data.data);
+
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+  }
+};
 
 
   // ======================================================
