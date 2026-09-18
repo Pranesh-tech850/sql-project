@@ -4,8 +4,8 @@ import "./Balance.css";
 // ==========================================
 // BACKEND API URL
 // ==========================================
+const API_URL = "https://sql-project-2-ur3x.onrender.com";
 
-const API_URL = "https://sql-project-8ysu.onrender.com";
 
 function Balance() {
 
