@@ -1,6 +1,15 @@
 import { useState } from "react";
 import "./Balance.css";
 
+// ==========================================
+// BACKEND API URL
+// ==========================================
+
+const API_URL = (
+  import.meta.env.VITE_API_URL || "http://localhost:5000"
+).replace(/\/$/, "");
+
+
 function Balance() {
 
   const [balance, setBalance] = useState([]);
@@ -32,7 +41,7 @@ function Balance() {
       setLoading(true);
 
       const response = await fetch(
-        "http://localhost:5000/balance"
+        `${API_URL}/balance`
       );
 
       if (!response.ok) {
@@ -48,6 +57,10 @@ function Balance() {
     } catch (error) {
 
       console.error("BALANCE ERROR:", error);
+
+      setErrorMessage(
+        "Unable to fetch balance from server."
+      );
 
     } finally {
 
@@ -111,12 +124,21 @@ function Balance() {
     }
 
 
-    // Convert quantity to number
+    // ======================================
+    // CONVERT QUANTITY TO NUMBER
+    // ======================================
+
     const quantity = Number(buyQuantity);
 
 
-    // Validate quantity
-    if (!Number.isInteger(quantity) || quantity <= 0) {
+    // ======================================
+    // VALIDATE QUANTITY
+    // ======================================
+
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0
+    ) {
 
       setErrorMessage(
         "Please enter a valid quantity."
@@ -127,7 +149,10 @@ function Balance() {
     }
 
 
-    if (quantity > Number(selectedProduct.quantity)) {
+    if (
+      quantity >
+      Number(selectedProduct.quantity)
+    ) {
 
       setErrorMessage(
         `Only ${selectedProduct.quantity} items are available.`
@@ -214,7 +239,7 @@ function Balance() {
       // ======================================
 
       const response = await fetch(
-        "http://localhost:5000/buy",
+        `${API_URL}/buy`,
         {
           method: "POST",
 
@@ -225,7 +250,8 @@ function Balance() {
           body: JSON.stringify({
 
             // BALANCE ROW
-            balance_id: selectedProduct.id,
+            balance_id:
+              selectedProduct.id,
 
             // PRODUCT
             product_id:
@@ -242,14 +268,18 @@ function Balance() {
               selectedProduct.user_email || null,
 
             // BUYER
-            buyer_id: buyerId,
+            buyer_id:
+              buyerId,
 
-            buyer_name: buyerName,
+            buyer_name:
+              buyerName,
 
-            buyer_email: buyerEmail,
+            buyer_email:
+              buyerEmail,
 
             // PURCHASE
-            quantity: quantity,
+            quantity:
+              quantity,
 
             price:
               Number(selectedProduct.price)
@@ -259,6 +289,10 @@ function Balance() {
         }
       );
 
+
+      // ======================================
+      // READ RESPONSE
+      // ======================================
 
       const data = await response.json();
 
@@ -297,40 +331,46 @@ function Balance() {
         // Product completely sold
         // Remove it from table
 
-        setBalance((previousBalance) =>
-          previousBalance.filter(
-            (item) =>
-              item.id !== selectedProduct.id
-          )
+        setBalance(
+          (previousBalance) =>
+            previousBalance.filter(
+              (item) =>
+                item.id !== selectedProduct.id
+            )
         );
-
 
       } else {
 
         // Product still has stock
         // Update quantity
 
-        setBalance((previousBalance) =>
-          previousBalance.map((item) => {
+        setBalance(
+          (previousBalance) =>
+            previousBalance.map((item) => {
 
-            if (item.id === selectedProduct.id) {
+              if (
+                item.id === selectedProduct.id
+              ) {
 
-              return {
-                ...item,
-                quantity: data.remainingQuantity
-              };
+                return {
+                  ...item,
+                  quantity:
+                    data.remainingQuantity
+                };
 
-            }
+              }
 
-            return item;
+              return item;
 
-          })
+            })
         );
 
       }
 
 
-      // Close modal after successful purchase
+      // ======================================
+      // CLOSE MODAL AFTER SUCCESS
+      // ======================================
 
       setTimeout(() => {
 
@@ -364,6 +404,10 @@ function Balance() {
 
   };
 
+
+  // ==========================================
+  // UI
+  // ==========================================
 
   return (
 
@@ -749,7 +793,9 @@ function Balance() {
                     Number(
                       selectedProduct.price
                     ) *
-                    Number(buyQuantity || 0)
+                    Number(
+                      buyQuantity || 0
+                    )
                   ).toFixed(2)}
 
                 </strong>
@@ -813,5 +859,6 @@ function Balance() {
   );
 
 }
+
 
 export default Balance;
