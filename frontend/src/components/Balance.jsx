@@ -5,9 +5,7 @@ import "./Balance.css";
 // BACKEND API URL
 // ==========================================
 
-const API_URL = "https://sql-project-2-ur3x.onrender.com";
-
-
+const API_URL = "https://sql-project-8ysu.onrender.com";
 
 function Balance() {
 
@@ -20,6 +18,10 @@ function Balance() {
 
   // BUY QUANTITY
   const [buyQuantity, setBuyQuantity] = useState(1);
+
+  // BUYER DETAILS
+  const [buyerName, setBuyerName] = useState("");
+  const [buyerEmail, setBuyerEmail] = useState("");
 
   // BUY LOADING
   const [buying, setBuying] = useState(false);
@@ -38,6 +40,7 @@ function Balance() {
     try {
 
       setLoading(true);
+      setErrorMessage("");
 
       const response = await fetch(
         `${API_URL}/balance`
@@ -45,7 +48,13 @@ function Balance() {
 
       if (!response.ok) {
 
-        throw new Error("Failed to fetch balance");
+        const errorData = await response.json();
+
+        throw new Error(
+          errorData.message ||
+          errorData.error ||
+          "Failed to fetch balance"
+        );
 
       }
 
@@ -55,7 +64,10 @@ function Balance() {
 
     } catch (error) {
 
-      console.error("BALANCE ERROR:", error);
+      console.error(
+        "BALANCE ERROR:",
+        error
+      );
 
       setErrorMessage(
         "Unable to fetch balance from server."
@@ -80,8 +92,10 @@ function Balance() {
 
     setBuyQuantity(1);
 
-    setMessage("");
+    setBuyerName("");
+    setBuyerEmail("");
 
+    setMessage("");
     setErrorMessage("");
 
     setShowBuyModal(true);
@@ -105,8 +119,10 @@ function Balance() {
 
     setBuyQuantity(1);
 
-    setMessage("");
+    setBuyerName("");
+    setBuyerEmail("");
 
+    setMessage("");
     setErrorMessage("");
 
   };
@@ -124,7 +140,33 @@ function Balance() {
 
 
     // ======================================
-    // CONVERT QUANTITY TO NUMBER
+    // VALIDATE BUYER
+    // ======================================
+
+    if (!buyerName.trim()) {
+
+      setErrorMessage(
+        "Please enter your name."
+      );
+
+      return;
+
+    }
+
+
+    if (!buyerEmail.trim()) {
+
+      setErrorMessage(
+        "Please enter your email."
+      );
+
+      return;
+
+    }
+
+
+    // ======================================
+    // CONVERT QUANTITY
     // ======================================
 
     const quantity = Number(buyQuantity);
@@ -167,70 +209,7 @@ function Balance() {
       setBuying(true);
 
       setMessage("");
-
       setErrorMessage("");
-
-
-      // ======================================
-      // GET CURRENT LOGGED-IN USER
-      // ======================================
-
-      let currentUser = null;
-
-      const storedUser =
-        localStorage.getItem("currentUser");
-
-
-      if (storedUser) {
-
-        try {
-
-          currentUser = JSON.parse(storedUser);
-
-        } catch (error) {
-
-          console.error(
-            "Invalid currentUser in localStorage"
-          );
-
-        }
-
-      }
-
-
-      // ======================================
-      // BUYER INFORMATION
-      // ======================================
-
-      const buyerId =
-        currentUser?.id ||
-        currentUser?.user_id ||
-        null;
-
-      const buyerName =
-        currentUser?.name ||
-        currentUser?.user_name ||
-        "";
-
-      const buyerEmail =
-        currentUser?.email ||
-        currentUser?.user_email ||
-        "";
-
-
-      // ======================================
-      // CHECK LOGIN
-      // ======================================
-
-      if (!buyerName || !buyerEmail) {
-
-        setErrorMessage(
-          "Please login before buying a product."
-        );
-
-        return;
-
-      }
 
 
       // ======================================
@@ -267,14 +246,13 @@ function Balance() {
               selectedProduct.user_email || null,
 
             // BUYER
-            buyer_id:
-              buyerId,
+            buyer_id: null,
 
             buyer_name:
-              buyerName,
+              buyerName.trim(),
 
             buyer_email:
-              buyerEmail,
+              buyerEmail.trim(),
 
             // PURCHASE
             quantity:
@@ -284,7 +262,6 @@ function Balance() {
               Number(selectedProduct.price)
 
           })
-
         }
       );
 
@@ -293,7 +270,8 @@ function Balance() {
       // READ RESPONSE
       // ======================================
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
 
       // ======================================
@@ -304,6 +282,7 @@ function Balance() {
 
         setErrorMessage(
           data.message ||
+          data.error ||
           "Purchase failed."
         );
 
@@ -325,7 +304,9 @@ function Balance() {
       // UPDATE FRONTEND BALANCE
       // ======================================
 
-      if (data.remainingQuantity === 0) {
+      if (
+        data.remainingQuantity === 0
+      ) {
 
         // Product completely sold
         // Remove it from table
@@ -334,7 +315,8 @@ function Balance() {
           (previousBalance) =>
             previousBalance.filter(
               (item) =>
-                item.id !== selectedProduct.id
+                item.id !==
+                selectedProduct.id
             )
         );
 
@@ -345,23 +327,26 @@ function Balance() {
 
         setBalance(
           (previousBalance) =>
-            previousBalance.map((item) => {
+            previousBalance.map(
+              (item) => {
 
-              if (
-                item.id === selectedProduct.id
-              ) {
+                if (
+                  item.id ===
+                  selectedProduct.id
+                ) {
 
-                return {
-                  ...item,
-                  quantity:
-                    data.remainingQuantity
-                };
+                  return {
+                    ...item,
+                    quantity:
+                      data.remainingQuantity
+                  };
+
+                }
+
+                return item;
 
               }
-
-              return item;
-
-            })
+            )
         );
 
       }
@@ -378,6 +363,9 @@ function Balance() {
         setSelectedProduct(null);
 
         setBuyQuantity(1);
+
+        setBuyerName("");
+        setBuyerEmail("");
 
         setMessage("");
 
@@ -459,7 +447,6 @@ function Balance() {
 
       <div className="balance-card">
 
-
         <div className="balance-top">
 
           <div>
@@ -488,6 +475,20 @@ function Balance() {
           )}
 
         </div>
+
+
+
+        {/* ====================================
+            ERROR
+        ==================================== */}
+
+        {errorMessage && !showBuyModal && (
+
+          <div className="buy-error">
+            {errorMessage}
+          </div>
+
+        )}
 
 
 
@@ -610,8 +611,6 @@ function Balance() {
                     </td>
 
 
-                    {/* BUY BUTTON */}
-
                     <td>
 
                       <button
@@ -653,7 +652,8 @@ function Balance() {
             onClick={(e) => {
 
               if (
-                e.target === e.currentTarget
+                e.target ===
+                e.currentTarget
               ) {
 
                 closeBuyModal();
@@ -696,7 +696,6 @@ function Balance() {
                 <p>
 
                   Seller:
-
                   {" "}
 
                   <strong>
@@ -709,7 +708,6 @@ function Balance() {
                 <p>
 
                   Price:
-
                   {" "}
 
                   <strong>
@@ -727,7 +725,6 @@ function Balance() {
                 <p>
 
                   Available Quantity:
-
                   {" "}
 
                   <strong>
@@ -742,7 +739,64 @@ function Balance() {
 
 
 
-              {/* QUANTITY */}
+              {/* ==================================
+                  BUYER DETAILS
+              ================================== */}
+
+              <div className="buy-quantity-box">
+
+                <label>
+                  Buyer Name
+                </label>
+
+                <input
+                  type="text"
+                  placeholder="Enter your name"
+                  value={buyerName}
+                  disabled={buying}
+                  onChange={(e) => {
+
+                    setBuyerName(
+                      e.target.value
+                    );
+
+                    setErrorMessage("");
+
+                  }}
+                />
+
+              </div>
+
+
+              <div className="buy-quantity-box">
+
+                <label>
+                  Buyer Email
+                </label>
+
+                <input
+                  type="email"
+                  placeholder="Enter your email"
+                  value={buyerEmail}
+                  disabled={buying}
+                  onChange={(e) => {
+
+                    setBuyerEmail(
+                      e.target.value
+                    );
+
+                    setErrorMessage("");
+
+                  }}
+                />
+
+              </div>
+
+
+
+              {/* ==================================
+                  QUANTITY
+              ================================== */}
 
               <div className="buy-quantity-box">
 
@@ -762,7 +816,9 @@ function Balance() {
                   onChange={(e) => {
 
                     const value =
-                      Number(e.target.value);
+                      Number(
+                        e.target.value
+                      );
 
                     setBuyQuantity(value);
 
@@ -775,7 +831,9 @@ function Balance() {
 
 
 
-              {/* TOTAL */}
+              {/* ==================================
+                  TOTAL
+              ================================== */}
 
               <div className="buy-total">
 
@@ -858,6 +916,5 @@ function Balance() {
   );
 
 }
-
 
 export default Balance;
