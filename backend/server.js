@@ -369,7 +369,7 @@ app.get("/products/search", (req, res) => {
 app.get("/orderss", (req, res) => {
     const start = Date.now();
 
-    db.query("SELECT * FROM orders LIMIT 100000", (err, results) => {
+    db.query("SELECT * FROM orders LIMIT 1000", (err, results) => {
 
         const time = Date.now() - start;
 
