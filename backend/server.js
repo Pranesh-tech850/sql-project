@@ -348,32 +348,30 @@ app.get("/products/search", (req, res) => {
 // =====================================================
 // ORDERS - GET 1000
 // =====================================================
-
 app.get("/orderss", (req, res) => {
-
     const start = Date.now();
 
-    db.query(
-        "SELECT * FROM orders LIMIT 1000",
-        (err, result) => {
+    db.query("SELECT * FROM orders LIMIT 100000", (err, results) => {
 
-            const time = Date.now() - start;
+        const time = Date.now() - start;
 
-            if (err) {
+        console.log("ORDERS ERROR:", err);
+        console.log("ORDERS ROWS:", results ? results.length : null);
+        console.log("ORDERS TIME:", time, "ms");
 
-                return res.status(500).json({
-                    error: err.message,
-                    time: time + " ms"
-                });
-            }
-
-            res.json({
-                orders: result,
-                rows: result.length,
-                time: time + " ms"
+        if (err) {
+            return res.status(500).json({
+                error: err.message,
+                time: `${time} ms`
             });
         }
-    );
+
+        res.json({
+            count: results.length,
+            time: `${time} ms`,
+            data: results
+        });
+    });
 });
 
 
