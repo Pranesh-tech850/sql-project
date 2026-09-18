@@ -8,15 +8,27 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const db = mysql.createConnection({
+
+// =====================================================
+// MYSQL CONNECTION POOL
+// =====================================================
+
+const db = mysql.createPool({
     host: process.env.DB_HOST,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
-    port: Number(process.env.DB_PORT)
+    port: Number(process.env.DB_PORT),
+
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0
 });
 
-db.connect((err) => {
+
+// Test MySQL connection
+db.getConnection((err, connection) => {
+
     if (err) {
         console.error("MySQL connection failed:");
         console.error(err);
@@ -24,10 +36,19 @@ db.connect((err) => {
     }
 
     console.log("MySQL connected successfully");
+
+    connection.release();
 });
 
+
+// =====================================================
+// USERS
+// =====================================================
+
 app.get("/users", (req, res) => {
+
     db.query("SELECT * FROM users", (err, results) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
@@ -37,6 +58,11 @@ app.get("/users", (req, res) => {
         res.json(results);
     });
 });
+
+
+// =====================================================
+// SEARCH USER
+// =====================================================
 
 app.get("/users/search", (req, res) => {
 
@@ -66,51 +92,86 @@ app.get("/users/search", (req, res) => {
 });
 
 
+// =====================================================
+// CREATE USER
+// =====================================================
 
 app.post("/users", (req, res) => {
+
     const { name, email } = req.body;
-    const sql = "INSERT INTO users (name, email) VALUES (?, ?)";
+
+    const sql = `
+        INSERT INTO users (name, email)
+        VALUES (?, ?)
+    `;
+
     db.query(sql, [name, email], (err, results) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
             });
         }
-        else {
-            res.status(201).json({
-                message: "User created successfully",
-                userId: results.insertId
-            })
-        }
 
+        res.status(201).json({
+            message: "User created successfully",
+            userId: results.insertId
+        });
     });
 });
+
+
+// =====================================================
+// DELETE USER
+// =====================================================
 
 app.delete("/users/:id", (req, res) => {
+
     const userId = req.params.id;
-    const sql = "DELETE FROM users WHERE id = ?";
-    db.query(sql, [userId], (err, results) => {
+
+    const sql = `
+        DELETE FROM users
+        WHERE id = ?
+    `;
+
+    db.query(sql, [userId], (err, result) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
             });
         }
-        else {
-            res.status(200).json({
-                message: "User deleted successfully"
-            })
+
+        if (result.affectedRows === 0) {
+            return res.status(404).json({
+                message: "User not found"
+            });
         }
+
+        res.json({
+            message: "User deleted successfully"
+        });
     });
 });
 
 
+// =====================================================
+// UPDATE USER
+// =====================================================
+
 app.put("/users/:id", (req, res) => {
+
     const { id } = req.params;
     const { name, email } = req.body;
 
-    const sql = "UPDATE users SET name = ?, email = ? WHERE id = ?";
+    const sql = `
+        UPDATE users
+        SET name = ?, email = ?
+        WHERE id = ?
+    `;
 
     db.query(sql, [name, email, id], (err, result) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
@@ -130,93 +191,69 @@ app.put("/users/:id", (req, res) => {
 });
 
 
-app.delete("/users/:id", (req, res) => {
+// =====================================================
+// PRODUCTS
+// =====================================================
 
-
-
-    const userId = req.params.id;
-
-    const sql = "DELETE FROM users WHERE id = ?";
-
-    db.query(sql, [userId], (err, result) => {
-
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
-
-        if (result.affectedRows === 0) {
-            return res.status(404).json({
-                message: "User not found"
-            });
-        }
-
-        res.json({
-            message: "User deleted successfully"
-        });
-
-     
-
-    });
-});
-// """""""""""""""""""""""""""""""Product page to get all list of products"""""""""""""""""""""""""""""""""
 app.get("/products", (req, res) => {
+
     db.query("SELECT * FROM products", (err, results) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
             });
         }
+
         res.json(results);
     });
 });
 
 
+// =====================================================
+// CREATE PRODUCT
+// =====================================================
+
 app.post("/products", (req, res) => {
-    const { product_name,price } = req.body;
-    const sql = "INSERT INTO products (product_name, price) VALUES (?, ?)";
-    db.query(sql, [product_name, price], (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
-        else {
-            res.status(201).json({
-                message: "Product created successfully",
-                userId: results.insertId
-            })
-        }
 
-    });
-});
-
-app.delete("/products/:id", (req, res) => {
-    const id = req.params.id;
-    const sql = "DELETE FROM products WHERE id = ?";
-    db.query(sql, [id], (err, results) => {
-        if (err) {
-            return res.status(500).json({
-                error: err.message
-            });
-        }
-        else {
-            res.status(200).json({
-                message: "Product  deleted successfully"
-            })
-        }
-    });
-});
-
-
-app.put("/products/:id", (req, res) => {
-    const { id } = req.params;
     const { product_name, price } = req.body;
 
-    const sql = "UPDATE products SET product_name = ?, price = ? WHERE id = ?";
+    const sql = `
+        INSERT INTO products (product_name, price)
+        VALUES (?, ?)
+    `;
 
-    db.query(sql, [product_name, price, id], (err, result) => {
+    db.query(sql, [product_name, price], (err, results) => {
+
+        if (err) {
+            return res.status(500).json({
+                error: err.message
+            });
+        }
+
+        res.status(201).json({
+            message: "Product created successfully",
+            productId: results.insertId
+        });
+    });
+});
+
+
+// =====================================================
+// DELETE PRODUCT
+// =====================================================
+
+app.delete("/products/:id", (req, res) => {
+
+    const id = req.params.id;
+
+    const sql = `
+        DELETE FROM products
+        WHERE id = ?
+    `;
+
+    db.query(sql, [id], (err, result) => {
+
         if (err) {
             return res.status(500).json({
                 error: err.message
@@ -230,10 +267,55 @@ app.put("/products/:id", (req, res) => {
         }
 
         res.json({
-            message: "Product updated successfully"
+            message: "Product deleted successfully"
         });
     });
 });
+
+
+// =====================================================
+// UPDATE PRODUCT
+// =====================================================
+
+app.put("/products/:id", (req, res) => {
+
+    const { id } = req.params;
+    const { product_name, price } = req.body;
+
+    const sql = `
+        UPDATE products
+        SET product_name = ?, price = ?
+        WHERE id = ?
+    `;
+
+    db.query(
+        sql,
+        [product_name, price, id],
+        (err, result) => {
+
+            if (err) {
+                return res.status(500).json({
+                    error: err.message
+                });
+            }
+
+            if (result.affectedRows === 0) {
+                return res.status(404).json({
+                    message: "Product not found"
+                });
+            }
+
+            res.json({
+                message: "Product updated successfully"
+            });
+        }
+    );
+});
+
+
+// =====================================================
+// SEARCH PRODUCT
+// =====================================================
 
 app.get("/products/search", (req, res) => {
 
@@ -263,8 +345,9 @@ app.get("/products/search", (req, res) => {
 });
 
 
-
-// """""""""""""""""""""""""""""""Product page to get all list of products"""""""""""""""""""""""""""""""""
+// =====================================================
+// ORDERS - GET 1000
+// =====================================================
 
 app.get("/orderss", (req, res) => {
 
@@ -277,6 +360,7 @@ app.get("/orderss", (req, res) => {
             const time = Date.now() - start;
 
             if (err) {
+
                 return res.status(500).json({
                     error: err.message,
                     time: time + " ms"
@@ -292,12 +376,17 @@ app.get("/orderss", (req, res) => {
     );
 });
 
-// email
+
+// =====================================================
+// ORDERS - SEARCH BY EMAIL
+// =====================================================
+
 app.get("/orders", (req, res) => {
 
     const { user_email } = req.query;
 
     if (!user_email) {
+
         return res.status(400).json({
             error: "Please provide user email"
         });
@@ -316,6 +405,7 @@ app.get("/orders", (req, res) => {
         const time = Date.now() - start;
 
         if (err) {
+
             return res.status(500).json({
                 error: err.message,
                 time: time + " ms"
@@ -330,29 +420,49 @@ app.get("/orders", (req, res) => {
     });
 });
 
+
+// =====================================================
+// DELETE ORDER
+// =====================================================
+
 app.delete("/orderss/:id", (req, res) => {
 
-  const id = req.params.id;
+    const id = req.params.id;
 
-  const sql = "DELETE FROM orders WHERE id = ?";
+    const sql = `
+        DELETE FROM orders
+        WHERE id = ?
+    `;
 
-  db.query(sql, [id], (err, result) => {
+    db.query(sql, [id], (err, result) => {
 
-    if (err) {
-      console.error(err);
-      return res.status(500).json({
-        message: "Failed to delete order"
-      });
-    }
+        if (err) {
 
-    res.json({
-      message: "Order deleted successfully",
-      deletedId: id
+            console.error(err);
+
+            return res.status(500).json({
+                message: "Failed to delete order"
+            });
+        }
+
+        if (result.affectedRows === 0) {
+
+            return res.status(404).json({
+                message: "Order not found"
+            });
+        }
+
+        res.json({
+            message: "Order deleted successfully",
+            deletedId: id
+        });
     });
-
-  });
-
 });
+
+
+// =====================================================
+// CREATE ORDER
+// =====================================================
 
 app.post("/orderss", (req, res) => {
 
@@ -368,7 +478,15 @@ app.post("/orderss", (req, res) => {
 
     const sql = `
         INSERT INTO orders
-        (user_id, product_id, quantity, user_name, user_email, product_name, product_price)
+        (
+            user_id,
+            product_id,
+            quantity,
+            user_name,
+            user_email,
+            product_name,
+            product_price
+        )
         VALUES (?, ?, ?, ?, ?, ?, ?)
     `;
 
@@ -385,6 +503,7 @@ app.post("/orderss", (req, res) => {
     db.query(sql, values, (err, result) => {
 
         if (err) {
+
             console.error("MYSQL ERROR:", err);
 
             return res.status(500).json({
@@ -401,6 +520,9 @@ app.post("/orderss", (req, res) => {
 });
 
 
+// =====================================================
+// UPDATE ORDER
+// =====================================================
 
 app.put("/orderss/:id", (req, res) => {
 
@@ -443,6 +565,7 @@ app.put("/orderss/:id", (req, res) => {
     db.query(sql, values, (err, result) => {
 
         if (err) {
+
             console.error("MYSQL ERROR:", err);
 
             return res.status(500).json({
@@ -452,6 +575,7 @@ app.put("/orderss/:id", (req, res) => {
         }
 
         if (result.affectedRows === 0) {
+
             return res.status(404).json({
                 message: "Order not found"
             });
@@ -465,10 +589,9 @@ app.put("/orderss/:id", (req, res) => {
 });
 
 
-// ====================================BALANCE ===================================================================
-// ====================================
+// =====================================================
 // BALANCE
-// ====================================
+// =====================================================
 
 app.get("/balance", (req, res) => {
 
@@ -491,16 +614,13 @@ app.get("/balance", (req, res) => {
         }
 
         res.json(results);
-
     });
-
 });
 
 
-
-// ====================================
+// =====================================================
 // BUY PRODUCT
-// ====================================
+// =====================================================
 
 app.post("/buy", (req, res) => {
 
@@ -518,20 +638,18 @@ app.post("/buy", (req, res) => {
 
         quantity,
         price
-
     } = req.body;
 
 
-    // ==================================
+    // =================================================
     // VALIDATION
-    // ==================================
+    // =================================================
 
     if (!balance_id) {
 
         return res.status(400).json({
             message: "Balance ID is required"
         });
-
     }
 
 
@@ -540,7 +658,6 @@ app.post("/buy", (req, res) => {
         return res.status(400).json({
             message: "Invalid quantity"
         });
-
     }
 
 
@@ -549,432 +666,430 @@ app.post("/buy", (req, res) => {
         return res.status(400).json({
             message: "Buyer login information is required"
         });
-
     }
 
 
-    // ==================================
-    // START TRANSACTION
-    // ==================================
+    // =================================================
+    // GET A DEDICATED CONNECTION FROM POOL
+    // =================================================
 
-    db.beginTransaction((transactionError) => {
+    db.getConnection((connectionError, connection) => {
 
-        if (transactionError) {
+        if (connectionError) {
 
             console.error(
-                "TRANSACTION ERROR:",
-                transactionError
+                "GET CONNECTION ERROR:",
+                connectionError
             );
 
             return res.status(500).json({
-                message: "Could not start transaction"
+                message: "Could not get database connection",
+                error: connectionError.message
             });
-
         }
 
 
-        // ==================================
-        // LOCK BALANCE ROW
-        // ==================================
+        // =================================================
+        // START TRANSACTION
+        // =================================================
 
-        const lockSql = `
-            SELECT *
-            FROM balance
-            WHERE id = ?
-            FOR UPDATE
-        `;
+        connection.beginTransaction((transactionError) => {
 
+            if (transactionError) {
 
-        db.query(
-            lockSql,
-            [balance_id],
-            (lockError, rows) => {
+                connection.release();
 
-                if (lockError) {
-
-                    return db.rollback(() => {
-
-                        console.error(
-                            "LOCK ERROR:",
-                            lockError
-                        );
-
-                        res.status(500).json({
-                            message:
-                                "Failed to check product stock",
-                            error:
-                                lockError.message
-                        });
-
-                    });
-
-                }
-
-
-                // ==================================
-                // PRODUCT NOT FOUND
-                // ==================================
-
-                if (rows.length === 0) {
-
-                    return db.rollback(() => {
-
-                        res.status(404).json({
-                            message:
-                                "Product is no longer available"
-                        });
-
-                    });
-
-                }
-
-
-                const product = rows[0];
-
-
-                const availableQuantity =
-                    Number(product.quantity);
-
-
-                const requestedQuantity =
-                    Number(quantity);
-
-
-                // ==================================
-                // CHECK STOCK
-                // ==================================
-
-                if (
-                    availableQuantity <
-                    requestedQuantity
-                ) {
-
-                    return db.rollback(() => {
-
-                        res.status(409).json({
-
-                            message:
-                                `Only ${availableQuantity} items are available.`
-
-                        });
-
-                    });
-
-                }
-
-
-                // ==================================
-                // CALCULATE REMAINING
-                // ==================================
-
-                const remainingQuantity =
-                    availableQuantity -
-                    requestedQuantity;
-
-
-                // ==================================
-                // INSERT ORDER
-                // ==================================
-
-                const orderSql = `
-                    INSERT INTO orders
-                    (
-                        user_id,
-                        product_id,
-                        quantity,
-                        user_name,
-                        user_email,
-                        product_name,
-                        product_price
-                    )
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                `;
-
-
-                const orderValues = [
-
-                    buyer_id,
-
-                    product_id,
-
-                    requestedQuantity,
-
-                    buyer_name,
-
-                    buyer_email,
-
-                    product_name ||
-                    product.product_name,
-
-                    price ||
-                    product.price
-
-                ];
-
-
-                db.query(
-                    orderSql,
-                    orderValues,
-                    (orderError, orderResult) => {
-
-                        if (orderError) {
-
-                            return db.rollback(() => {
-
-                                console.error(
-                                    "ORDER INSERT ERROR:",
-                                    orderError
-                                );
-
-                                res.status(500).json({
-
-                                    message:
-                                        "Failed to create order",
-
-                                    error:
-                                        orderError.message
-
-                                });
-
-                            });
-
-                        }
-
-
-                        // ==================================
-                        // IF SOLD OUT
-                        // DELETE BALANCE ROW
-                        // ==================================
-
-                        if (
-                            remainingQuantity === 0
-                        ) {
-
-                            const deleteSql = `
-                                DELETE FROM balance
-                                WHERE id = ?
-                            `;
-
-
-                            db.query(
-                                deleteSql,
-                                [balance_id],
-                                (deleteError) => {
-
-                                    if (
-                                        deleteError
-                                    ) {
-
-                                        return db.rollback(
-                                            () => {
-
-                                                console.error(
-                                                    "DELETE BALANCE ERROR:",
-                                                    deleteError
-                                                );
-
-                                                res.status(
-                                                    500
-                                                ).json({
-
-                                                    message:
-                                                        "Failed to remove sold-out product",
-
-                                                    error:
-                                                        deleteError.message
-
-                                                });
-
-                                            }
-                                        );
-
-                                    }
-
-
-                                    // ==================================
-                                    // COMMIT
-                                    // ==================================
-
-                                    db.commit(
-                                        (commitError) => {
-
-                                            if (
-                                                commitError
-                                            ) {
-
-                                                return db.rollback(
-                                                    () => {
-
-                                                        console.error(
-                                                            "COMMIT ERROR:",
-                                                            commitError
-                                                        );
-
-                                                        res.status(
-                                                            500
-                                                        ).json({
-
-                                                            message:
-                                                                "Failed to complete purchase",
-
-                                                            error:
-                                                                commitError.message
-
-                                                        });
-
-                                                    }
-                                                );
-
-                                            }
-
-
-                                            res.status(201).json({
-
-                                                message:
-                                                    "Product sold successfully",
-
-                                                orderId:
-                                                    orderResult.insertId,
-
-                                                remainingQuantity:
-                                                    0,
-
-                                                soldOut:
-                                                    true
-
-                                            });
-
-                                        }
-                                    );
-
-                                }
-                            );
-
-
-                        } else {
-
-
-                            // ==================================
-                            // UPDATE BALANCE
-                            // ==================================
-
-                            const updateSql = `
-                                UPDATE balance
-                                SET quantity = ?
-                                WHERE id = ?
-                            `;
-
-
-                            db.query(
-                                updateSql,
-                                [
-                                    remainingQuantity,
-                                    balance_id
-                                ],
-                                (updateError) => {
-
-                                    if (
-                                        updateError
-                                    ) {
-
-                                        return db.rollback(
-                                            () => {
-
-                                                console.error(
-                                                    "UPDATE BALANCE ERROR:",
-                                                    updateError
-                                                );
-
-                                                res.status(
-                                                    500
-                                                ).json({
-
-                                                    message:
-                                                        "Failed to update balance",
-
-                                                    error:
-                                                        updateError.message
-
-                                                });
-
-                                            }
-                                        );
-
-                                    }
-
-
-                                    // ==================================
-                                    // COMMIT
-                                    // ==================================
-
-                                    db.commit(
-                                        (commitError) => {
-
-                                            if (
-                                                commitError
-                                            ) {
-
-                                                return db.rollback(
-                                                    () => {
-
-                                                        console.error(
-                                                            "COMMIT ERROR:",
-                                                            commitError
-                                                        );
-
-                                                        res.status(
-                                                            500
-                                                        ).json({
-
-                                                            message:
-                                                                "Purchase failed",
-
-                                                            error:
-                                                                commitError.message
-
-                                                        });
-
-                                                    }
-                                                );
-
-                                            }
-
-
-                                            res.status(201).json({
-
-                                                message:
-                                                    "Product purchased successfully",
-
-                                                orderId:
-                                                    orderResult.insertId,
-
-                                                remainingQuantity:
-                                                    remainingQuantity,
-
-                                                soldOut:
-                                                    false
-
-                                            });
-
-                                        }
-                                    );
-
-                                }
-                            );
-
-                        }
-
-                    }
+                console.error(
+                    "TRANSACTION ERROR:",
+                    transactionError
                 );
 
+                return res.status(500).json({
+                    message: "Could not start transaction",
+                    error: transactionError.message
+                });
             }
-        );
 
+
+            // =================================================
+            // LOCK BALANCE ROW
+            // =================================================
+
+            const lockSql = `
+                SELECT *
+                FROM balance
+                WHERE id = ?
+                FOR UPDATE
+            `;
+
+            connection.query(
+                lockSql,
+                [balance_id],
+                (lockError, rows) => {
+
+                    if (lockError) {
+
+                        return connection.rollback(() => {
+
+                            connection.release();
+
+                            console.error(
+                                "LOCK ERROR:",
+                                lockError
+                            );
+
+                            res.status(500).json({
+                                message:
+                                    "Failed to check product stock",
+                                error:
+                                    lockError.message
+                            });
+                        });
+                    }
+
+
+                    // =================================================
+                    // PRODUCT NOT FOUND
+                    // =================================================
+
+                    if (rows.length === 0) {
+
+                        return connection.rollback(() => {
+
+                            connection.release();
+
+                            res.status(404).json({
+                                message:
+                                    "Product is no longer available"
+                            });
+                        });
+                    }
+
+
+                    const product = rows[0];
+
+
+                    const availableQuantity =
+                        Number(product.quantity);
+
+                    const requestedQuantity =
+                        Number(quantity);
+
+
+                    // =================================================
+                    // CHECK STOCK
+                    // =================================================
+
+                    if (
+                        availableQuantity <
+                        requestedQuantity
+                    ) {
+
+                        return connection.rollback(() => {
+
+                            connection.release();
+
+                            res.status(409).json({
+                                message:
+                                    `Only ${availableQuantity} items are available.`
+                            });
+                        });
+                    }
+
+
+                    // =================================================
+                    // REMAINING QUANTITY
+                    // =================================================
+
+                    const remainingQuantity =
+                        availableQuantity -
+                        requestedQuantity;
+
+
+                    // =================================================
+                    // INSERT ORDER
+                    // =================================================
+
+                    const orderSql = `
+                        INSERT INTO orders
+                        (
+                            user_id,
+                            product_id,
+                            quantity,
+                            user_name,
+                            user_email,
+                            product_name,
+                            product_price
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    `;
+
+
+                    const orderValues = [
+
+                        buyer_id,
+
+                        product_id,
+
+                        requestedQuantity,
+
+                        buyer_name,
+
+                        buyer_email,
+
+                        product_name ||
+                        product.product_name,
+
+                        price ||
+                        product.price
+                    ];
+
+
+                    connection.query(
+                        orderSql,
+                        orderValues,
+                        (orderError, orderResult) => {
+
+                            if (orderError) {
+
+                                return connection.rollback(() => {
+
+                                    connection.release();
+
+                                    console.error(
+                                        "ORDER INSERT ERROR:",
+                                        orderError
+                                    );
+
+                                    res.status(500).json({
+                                        message:
+                                            "Failed to create order",
+                                        error:
+                                            orderError.message
+                                    });
+                                });
+                            }
+
+
+                            // =================================================
+                            // SOLD OUT
+                            // =================================================
+
+                            if (remainingQuantity === 0) {
+
+                                const deleteSql = `
+                                    DELETE FROM balance
+                                    WHERE id = ?
+                                `;
+
+
+                                connection.query(
+                                    deleteSql,
+                                    [balance_id],
+                                    (deleteError) => {
+
+                                        if (deleteError) {
+
+                                            return connection.rollback(
+                                                () => {
+
+                                                    connection.release();
+
+                                                    console.error(
+                                                        "DELETE BALANCE ERROR:",
+                                                        deleteError
+                                                    );
+
+                                                    res.status(500).json({
+                                                        message:
+                                                            "Failed to remove sold-out product",
+                                                        error:
+                                                            deleteError.message
+                                                    });
+                                                }
+                                            );
+                                        }
+
+
+                                        // =================================================
+                                        // COMMIT
+                                        // =================================================
+
+                                        connection.commit(
+                                            (commitError) => {
+
+                                                if (commitError) {
+
+                                                    return connection.rollback(
+                                                        () => {
+
+                                                            connection.release();
+
+                                                            console.error(
+                                                                "COMMIT ERROR:",
+                                                                commitError
+                                                            );
+
+                                                            res.status(500).json({
+                                                                message:
+                                                                    "Failed to complete purchase",
+                                                                error:
+                                                                    commitError.message
+                                                            });
+                                                        }
+                                                    );
+                                                }
+
+
+                                                connection.release();
+
+
+                                                res.status(201).json({
+
+                                                    message:
+                                                        "Product sold successfully",
+
+                                                    orderId:
+                                                        orderResult.insertId,
+
+                                                    remainingQuantity:
+                                                        0,
+
+                                                    soldOut:
+                                                        true
+                                                });
+                                            }
+                                        );
+                                    }
+                                );
+
+
+                            } else {
+
+                                // =================================================
+                                // UPDATE BALANCE
+                                // =================================================
+
+                                const updateSql = `
+                                    UPDATE balance
+                                    SET quantity = ?
+                                    WHERE id = ?
+                                `;
+
+
+                                connection.query(
+                                    updateSql,
+                                    [
+                                        remainingQuantity,
+                                        balance_id
+                                    ],
+                                    (updateError) => {
+
+                                        if (updateError) {
+
+                                            return connection.rollback(
+                                                () => {
+
+                                                    connection.release();
+
+                                                    console.error(
+                                                        "UPDATE BALANCE ERROR:",
+                                                        updateError
+                                                    );
+
+                                                    res.status(500).json({
+                                                        message:
+                                                            "Failed to update balance",
+                                                        error:
+                                                            updateError.message
+                                                    });
+                                                }
+                                            );
+                                        }
+
+
+                                        // =================================================
+                                        // COMMIT
+                                        // =================================================
+
+                                        connection.commit(
+                                            (commitError) => {
+
+                                                if (commitError) {
+
+                                                    return connection.rollback(
+                                                        () => {
+
+                                                            connection.release();
+
+                                                            console.error(
+                                                                "COMMIT ERROR:",
+                                                                commitError
+                                                            );
+
+                                                            res.status(500).json({
+                                                                message:
+                                                                    "Purchase failed",
+                                                                error:
+                                                                    commitError.message
+                                                            });
+                                                        }
+                                                    );
+                                                }
+
+
+                                                connection.release();
+
+
+                                                res.status(201).json({
+
+                                                    message:
+                                                        "Product purchased successfully",
+
+                                                    orderId:
+                                                        orderResult.insertId,
+
+                                                    remainingQuantity:
+                                                        remainingQuantity,
+
+                                                    soldOut:
+                                                        false
+                                                });
+                                            }
+                                        );
+                                    }
+                                );
+                            }
+                        }
+                    );
+                }
+            );
+        });
     });
-
 });
 
 
-app.listen(process.env.PORT, () => {
-    console.log(`Server running on port ${process.env.PORT}`);
+// =====================================================
+// ROOT / HEALTH CHECK
+// =====================================================
+
+app.get("/", (req, res) => {
+
+    res.json({
+        message: "Backend is running",
+        database: "Aiven MySQL"
+    });
+});
+
+
+// =====================================================
+// SERVER
+// =====================================================
+
+const PORT = process.env.PORT || 5000;
+
+app.listen(PORT, "0.0.0.0", () => {
+
+    console.log(`Server running on port ${PORT}`);
+
 });
