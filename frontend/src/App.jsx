@@ -1,7 +1,16 @@
 import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
 import { useState, useEffect } from "react";
 import "./App.css";
-import Balance from  "./components/Balance"
+import Balance from "./components/Balance";
+
+// ======================================================
+// BACKEND API URL
+// ======================================================
+
+const API_URL = (
+  import.meta.env.VITE_API_URL ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
 
 
 // ======================================================
@@ -26,20 +35,16 @@ function Users() {
 
   const [users, setUsers] = useState([]);
 
-  // Add User
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
 
-  // Get User
   const [showGetUser, setShowGetUser] = useState(false);
   const [userId, setUserId] = useState("");
   const [getUserEmail, setGetUserEmail] = useState("");
 
-  // Selected User
   const [selectedUser, setSelectedUser] = useState(null);
 
-  // Edit User
   const [showEditForm, setShowEditForm] = useState(false);
   const [editUserId, setEditUserId] = useState("");
   const [editName, setEditName] = useState("");
@@ -55,7 +60,7 @@ function Users() {
     try {
 
       const response = await fetch(
-        "http://localhost:5000/users"
+        `${API_URL}/users`
       );
 
       if (!response.ok) {
@@ -86,7 +91,7 @@ function Users() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/users/search?id=${userId}&email=${getUserEmail}`
+        `${API_URL}/users/search?id=${userId}&email=${getUserEmail}`
       );
 
       if (!response.ok) {
@@ -126,7 +131,7 @@ function Users() {
     try {
 
       const response = await fetch(
-        "http://localhost:5000/users",
+        `${API_URL}/users`,
         {
           method: "POST",
 
@@ -180,6 +185,7 @@ function Users() {
     setEditEmail(user.email);
 
     setShowEditForm(true);
+
   };
 
 
@@ -192,7 +198,7 @@ function Users() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/users/${editUserId}`,
+        `${API_URL}/users/${editUserId}`,
         {
           method: "PUT",
 
@@ -251,7 +257,7 @@ function Users() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/users/${id}`,
+        `${API_URL}/users/${id}`,
         {
           method: "DELETE"
         }
@@ -271,6 +277,7 @@ function Users() {
           errorData.error ||
           errorData.message
         );
+
       }
 
       const data = await response.json();
@@ -587,11 +594,8 @@ function Users() {
             <tr>
 
               <th>ID</th>
-
               <th>Name</th>
-
               <th>Email</th>
-
               <th>Actions</th>
 
             </tr>
@@ -670,7 +674,6 @@ function Users() {
 }
 
 
-
 // ======================================================
 // PRODUCTS
 // ======================================================
@@ -679,7 +682,6 @@ function Products() {
 
   const [products, setProducts] = useState([]);
 
-  // Add product
   const [showForm, setShowForm] = useState(false);
 
   const [productName, setProductName] =
@@ -688,16 +690,12 @@ function Products() {
   const [price, setPrice] =
     useState("");
 
-
-  // Search product
   const [showSearch, setShowSearch] =
     useState(false);
 
   const [productId, setProductId] =
     useState("");
 
-
-  // Edit product
   const [showEditForm, setShowEditForm] =
     useState(false);
 
@@ -720,7 +718,7 @@ function Products() {
     try {
 
       const response = await fetch(
-        "http://localhost:5000/products"
+        `${API_URL}/products`
       );
 
       const data =
@@ -755,7 +753,7 @@ function Products() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/products/search?id=${productId}`
+        `${API_URL}/products/search?id=${productId}`
       );
 
       if (!response.ok) {
@@ -795,7 +793,7 @@ function Products() {
     try {
 
       const response = await fetch(
-        "http://localhost:5000/products",
+        `${API_URL}/products`,
         {
           method: "POST",
 
@@ -865,7 +863,7 @@ function Products() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/products/${editProductId}`,
+        `${API_URL}/products/${editProductId}`,
         {
           method: "PUT",
 
@@ -921,7 +919,7 @@ function Products() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/products/${id}`,
+        `${API_URL}/products/${id}`,
         {
           method: "DELETE"
         }
@@ -1303,7 +1301,6 @@ function Products() {
 }
 
 
-
 // ======================================================
 // ORDERS
 // ======================================================
@@ -1312,18 +1309,14 @@ function Orders() {
 
   const [orders, setOrders] = useState([]);
 
-  // Search User
   const [searchEmail, setSearchEmail] = useState("");
   const [showSearch, setShowSearch] = useState(false);
 
-  // Add Order
   const [showAdd, setShowAdd] = useState(false);
 
-  // Edit Order
   const [showEdit, setShowEdit] = useState(false);
   const [editId, setEditId] = useState(null);
 
-  // Form Data
   const [formData, setFormData] = useState({
     user_id: "",
     product_id: "",
@@ -1336,11 +1329,10 @@ function Orders() {
 
 
   // ======================================================
-  // FETCH ALL ORDERS
+  // CONCURRENCY TEST
   // ======================================================
 
-
- const testConcurrency = async () => {
+  const testConcurrency = async () => {
 
     const start = performance.now();
 
@@ -1348,49 +1340,75 @@ function Orders() {
 
     for (let i = 0; i < 10; i++) {
 
-        requests.push(
-            fetch(
-                "http://localhost:5000/orders?user_email=user59@gmail.com"
-            )
-            .then(res => {
-                if (!res.ok) {
-                    throw new Error(`HTTP error: ${res.status}`);
-                }
+      requests.push(
+        fetch(
+          `${API_URL}/orders?user_email=user59@gmail.com`
+        )
+          .then(res => {
 
-                return res.json();
-            })
-        );
+            if (!res.ok) {
+
+              throw new Error(
+                `HTTP error: ${res.status}`
+              );
+
+            }
+
+            return res.json();
+
+          })
+      );
+
     }
 
     try {
 
-        const results = await Promise.all(requests);
+      const results =
+        await Promise.all(requests);
 
-        const end = performance.now();
+      const end =
+        performance.now();
 
-        console.log("Total time:", Math.round(end - start), "ms");
-        console.table(results);
+      console.log(
+        "Total time:",
+        Math.round(end - start),
+        "ms"
+      );
+
+      console.table(results);
 
     } catch (error) {
 
-        console.error("Concurrency test failed:", error);
+      console.error(
+        "Concurrency test failed:",
+        error
+      );
 
     }
-};
+
+  };
+
+
+  // ======================================================
+  // FETCH ALL ORDERS
+  // ======================================================
 
   const fetchOrders = async () => {
 
     try {
 
       const response = await fetch(
-        "http://localhost:5000/orderss"
+        `${API_URL}/orderss`
       );
 
       if (!response.ok) {
-        throw new Error("Failed to fetch orders");
+        throw new Error(
+          "Failed to fetch orders"
+        );
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       setOrders(data.orders);
 
@@ -1414,15 +1432,18 @@ function Orders() {
 
     if (!searchEmail) {
 
-      alert("Please enter user email");
+      alert(
+        "Please enter user email"
+      );
 
       return;
+
     }
 
     try {
 
       const response = await fetch(
-        `http://localhost:5000/orders?user_email=${encodeURIComponent(searchEmail)}`
+        `${API_URL}/orders?user_email=${encodeURIComponent(searchEmail)}`
       );
 
       if (!response.ok) {
@@ -1433,7 +1454,8 @@ function Orders() {
 
       }
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
       setOrders(data.orders);
 
@@ -1482,12 +1504,13 @@ function Orders() {
     try {
 
       const response = await fetch(
-        "http://localhost:5000/orderss",
+        `${API_URL}/orderss`,
         {
           method: "POST",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
 
           body: JSON.stringify(formData)
@@ -1538,7 +1561,6 @@ function Orders() {
       });
 
 
-      // Refresh orders table
       fetchOrders();
 
 
@@ -1573,7 +1595,7 @@ function Orders() {
     try {
 
       const response = await fetch(
-        `http://localhost:5000/orderss/${id}`,
+        `${API_URL}/orderss/${id}`,
         {
           method: "DELETE"
         }
@@ -1589,7 +1611,6 @@ function Orders() {
       }
 
 
-      // Remove deleted order from UI
       setOrders(
         (previousOrders) =>
           previousOrders.filter(
@@ -1619,7 +1640,6 @@ function Orders() {
 
     setEditId(order.id);
 
-
     setFormData({
 
       user_id: order.user_id,
@@ -1637,7 +1657,6 @@ function Orders() {
       product_price: order.product_price
 
     });
-
 
     setShowEdit(true);
 
@@ -1664,12 +1683,13 @@ function Orders() {
 
 
       const response = await fetch(
-        `http://localhost:5000/orderss/${id}`,
+        `${API_URL}/orderss/${id}`,
         {
           method: "PUT",
 
           headers: {
-            "Content-Type": "application/json"
+            "Content-Type":
+              "application/json"
           },
 
           body: JSON.stringify(formData)
@@ -1722,7 +1742,6 @@ function Orders() {
       });
 
 
-      // Refresh orders table
       fetchOrders();
 
 
@@ -1746,9 +1765,6 @@ function Orders() {
 
     <div className="page">
 
-
-      {/* PAGE HEADER */}
-
       <div className="page-header">
 
         <div>
@@ -1766,9 +1782,6 @@ function Orders() {
 
         <div className="actions">
 
-
-          {/* SEARCH USER */}
-
           <button
             className="search-btn"
             onClick={() =>
@@ -1778,12 +1791,13 @@ function Orders() {
             Search User
           </button>
 
-          <button onClick={testConcurrency}>
-    Test 10 Concurrent Requests
-</button>
 
+          <button
+            onClick={testConcurrency}
+          >
+            Test 10 Concurrent Requests
+          </button>
 
-          {/* ADD ORDER */}
 
           <button
             className="add-btn"
@@ -1795,15 +1809,12 @@ function Orders() {
           </button>
 
 
-          {/* FETCH ALL ORDERS */}
-
           <button
             className="fetch-btn"
             onClick={fetchOrders}
           >
             Get All Orders
           </button>
-
 
         </div>
 
@@ -1855,56 +1866,43 @@ function Orders() {
 
                 <tr key={order.id}>
 
-
                   <td>
                     {order.id}
                   </td>
-
 
                   <td>
                     {order.user_id}
                   </td>
 
-
                   <td>
                     {order.product_id}
                   </td>
-
 
                   <td>
                     {order.quantity}
                   </td>
 
-
                   <td>
                     {order.user_name}
                   </td>
-
 
                   <td>
                     {order.user_email}
                   </td>
 
-
                   <td>
                     {order.product_name}
                   </td>
-
 
                   <td>
                     ₹{order.product_price}
                   </td>
 
-
                   <td>
                     {order.order_date}
                   </td>
 
-
                   <td>
-
-
-                    {/* EDIT */}
 
                     <button
                       className="edit-btn"
@@ -1916,8 +1914,6 @@ function Orders() {
                     </button>
 
 
-                    {/* DELETE */}
-
                     <button
                       className="delete-btn"
                       onClick={() =>
@@ -1927,9 +1923,7 @@ function Orders() {
                       Delete
                     </button>
 
-
                   </td>
-
 
                 </tr>
 
@@ -1964,7 +1958,6 @@ function Orders() {
 
           <div className="modal order-modal">
 
-
             <div className="modal-header">
 
               <h2>
@@ -1998,11 +1991,8 @@ function Orders() {
               }}
             >
 
-
               <div className="order-form-grid">
 
-
-                {/* USER ID */}
 
                 <div className="order-form-group">
 
@@ -2021,8 +2011,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT ID */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2039,8 +2027,6 @@ function Orders() {
 
                 </div>
 
-
-                {/* QUANTITY */}
 
                 <div className="order-form-group">
 
@@ -2060,8 +2046,6 @@ function Orders() {
                 </div>
 
 
-                {/* USER NAME */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2078,8 +2062,6 @@ function Orders() {
 
                 </div>
 
-
-                {/* USER EMAIL */}
 
                 <div className="order-form-group full-width">
 
@@ -2098,8 +2080,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT NAME */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2117,8 +2097,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT PRICE */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2135,12 +2113,10 @@ function Orders() {
 
                 </div>
 
-
               </div>
 
 
               <div className="modal-actions">
-
 
                 <button
                   type="button"
@@ -2164,9 +2140,7 @@ function Orders() {
                   Update Order
                 </button>
 
-
               </div>
-
 
             </form>
 
@@ -2186,7 +2160,6 @@ function Orders() {
         <div className="modal-overlay">
 
           <div className="modal search-modal">
-
 
             <div className="modal-header">
 
@@ -2230,7 +2203,6 @@ function Orders() {
               Search Orders
             </button>
 
-
           </div>
 
         </div>
@@ -2247,7 +2219,6 @@ function Orders() {
         <div className="modal-overlay">
 
           <div className="modal order-modal">
-
 
             <div className="modal-header">
 
@@ -2272,11 +2243,8 @@ function Orders() {
               onSubmit={addOrder}
             >
 
-
               <div className="order-form-grid">
 
-
-                {/* USER ID */}
 
                 <div className="order-form-group">
 
@@ -2295,8 +2263,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT ID */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2313,8 +2279,6 @@ function Orders() {
 
                 </div>
 
-
-                {/* QUANTITY */}
 
                 <div className="order-form-group">
 
@@ -2334,8 +2298,6 @@ function Orders() {
                 </div>
 
 
-                {/* USER NAME */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2352,8 +2314,6 @@ function Orders() {
 
                 </div>
 
-
-                {/* USER EMAIL */}
 
                 <div className="order-form-group full-width">
 
@@ -2372,8 +2332,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT NAME */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2391,8 +2349,6 @@ function Orders() {
                 </div>
 
 
-                {/* PRODUCT PRICE */}
-
                 <div className="order-form-group">
 
                   <label>
@@ -2409,12 +2365,10 @@ function Orders() {
 
                 </div>
 
-
               </div>
 
 
               <div className="modal-actions">
-
 
                 <button
                   type="button"
@@ -2434,19 +2388,15 @@ function Orders() {
                   Add Order
                 </button>
 
-
               </div>
 
-
             </form>
-
 
           </div>
 
         </div>
 
       )}
-
 
     </div>
 
@@ -2465,7 +2415,6 @@ function App() {
 
     <BrowserRouter>
 
-
       {/* NAVBAR */}
 
       <nav className="navbar">
@@ -2481,24 +2430,20 @@ function App() {
             Dashboard
           </Link>
 
-
           <Link to="/users">
             Users
           </Link>
-
 
           <Link to="/products">
             Products
           </Link>
 
-
           <Link to="/orders">
             Orders
           </Link>
 
-
           <Link to="/balance">
-             Balance
+            Balance
           </Link>
 
         </div>
@@ -2512,41 +2457,30 @@ function App() {
 
         <Route
           path="/"
-          element={
-            <Dashboard />
-          }
+          element={<Dashboard />}
         />
-
 
         <Route
           path="/users"
-          element={
-            <Users />
-          }
+          element={<Users />}
         />
-
 
         <Route
           path="/products"
-          element={
-            <Products />
-          }
+          element={<Products />}
         />
-
 
         <Route
           path="/orders"
-          element={
-            <Orders />
-          }
+          element={<Orders />}
         />
-        
-        <Route path="/balance"
-         element={<Balance />}>  
 
-        </Route>
+        <Route
+          path="/balance"
+          element={<Balance />}
+        />
+
       </Routes>
-
 
     </BrowserRouter>
 
