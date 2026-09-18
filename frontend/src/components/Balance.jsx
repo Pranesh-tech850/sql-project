@@ -5,9 +5,7 @@ import "./Balance.css";
 // BACKEND API URL
 // ==========================================
 
-const API_URL = (
-  import.meta.env.VITE_API_URL || "http://localhost:5000"
-).replace(/\/$/, "");
+const API_URL = "https://sql-project-8ysu.onrender.com";
 
 
 function Balance() {
