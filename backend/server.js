@@ -46,12 +46,30 @@ db.getConnection((err, connection) => {
 // =====================================================
 
 app.get("/users", (req, res) => {
+    const start = Date.now();
 
     db.query("SELECT * FROM users", (err, results) => {
 
+        const time = Date.now() - start;
+
         if (err) {
+
+            console.error("========== USERS ERROR ==========");
+            console.error("message:", err.message);
+            console.error("code:", err.code);
+            console.error("errno:", err.errno);
+            console.error("sqlState:", err.sqlState);
+            console.error("sqlMessage:", err.sqlMessage);
+            console.error("full error:", err);
+            console.error("=================================");
+
             return res.status(500).json({
-                error: err.message
+                error: err.message || "Unknown MySQL error",
+                code: err.code || null,
+                errno: err.errno || null,
+                sqlState: err.sqlState || null,
+                sqlMessage: err.sqlMessage || null,
+                time: `${time} ms`
             });
         }
 
