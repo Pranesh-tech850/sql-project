@@ -641,7 +641,7 @@ app.post("/buy/:balanceid", (req, res) => {
 
       const { quantity } = req.body;
 
-    const balance_id = req.params.balance_id;
+    const balance_id = req.params.balanceid;
 
     console.log("🔥 BUY ENDPOINT HIT");
     console.log("Balance ID:", balance_id);
