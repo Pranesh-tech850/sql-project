@@ -84,14 +84,21 @@ app.get("/users", (req, res) => {
 
 app.get("/users/search", (req, res) => {
 
-    const { id, email } = req.query;
+    const { email } = req.query;
+
+    if (!email) {
+        return res.status(400).json({
+            message: "Please provide email"
+        });
+    }
 
     const sql = `
-        SELECT * FROM users
-        WHERE id = ? AND email = ?
+        SELECT *
+        FROM users
+        WHERE email = ?
     `;
 
-    db.query(sql, [id, email], (err, results) => {
+    db.query(sql, [email], (err, results) => {
 
         if (err) {
             return res.status(500).json({

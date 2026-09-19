@@ -83,40 +83,37 @@ function Users() {
   // GET PARTICULAR USER
   // ======================================================
 
-  const getUser = async () => {
+ const getUser = async () => {
 
-    try {
+  if (!getUserEmail.trim()) {
+    alert("Please enter email");
+    return;
+  }
 
-      const response = await fetch(
-        `${API_URL}/users/search?id=${userId}&email=${getUserEmail}`
-      );
+  try {
 
-      if (!response.ok) {
-        throw new Error("User not found");
-      }
+    const response = await fetch(
+      `${API_URL}/users/search?email=${encodeURIComponent(getUserEmail)}`
+    );
 
-      const data = await response.json();
+    const data = await response.json();
 
-      setUsers([data]);
-
-      setSelectedUser(data);
-
-      setShowGetUser(false);
-
-      setUserId("");
-      setGetUserEmail("");
-
-    } catch (error) {
-
-      console.error(
-        "Error fetching particular user:",
-        error
-      );
-
-      alert("User not found");
-
+    if (!response.ok) {
+      setSelectedUser(null);
+      alert(data.message || "User not found");
+      return;
     }
-  };
+
+    setSelectedUser(data);
+
+  } catch (error) {
+
+    console.error("GET USER ERROR:", error);
+
+    setSelectedUser(null);
+
+  }
+};
 
 
   // ======================================================
@@ -417,92 +414,75 @@ function Users() {
 
       {showGetUser && (
 
-        <div className="modal-overlay">
+  <div className="modal-overlay">
 
-          <div className="modal">
+    <div className="modal">
 
-            <div className="modal-header">
+      <div className="modal-header">
 
-              <h2>
-                Get User
-              </h2>
+        <h2>
+          Get User
+        </h2>
 
-              <button
-                className="close-btn"
-                onClick={() => {
+        <button
+          className="close-btn"
+          onClick={() => {
 
-                  setShowGetUser(false);
+            setShowGetUser(false);
+            setSelectedUser(null);
+            setGetUserEmail("");
 
-                  setSelectedUser(null);
+          }}
+        >
+          ×
+        </button>
 
-                  setUserId("");
+      </div>
 
-                  setGetUserEmail("");
+      <input
+        type="email"
+        placeholder="Enter Email"
+        value={getUserEmail}
+        onChange={(e) =>
+          setGetUserEmail(e.target.value)
+        }
+      />
 
-                }}
-              >
-                ×
-              </button>
+      <button
+        className="save-btn"
+        onClick={getUser}
+      >
+        Fetch User
+      </button>
 
-            </div>
+      {selectedUser && (
 
+        <div className="user-details">
 
-            <input
-              type="number"
-              placeholder="Enter User ID"
-              value={userId}
-              onChange={(e) =>
-                setUserId(e.target.value)
-              }
-            />
+          <p>
+            <strong>ID:</strong>{" "}
+            {selectedUser.id}
+          </p>
 
+          <p>
+            <strong>Name:</strong>{" "}
+            {selectedUser.name}
+          </p>
 
-            <input
-              type="email"
-              placeholder="Enter Email"
-              value={getUserEmail}
-              onChange={(e) =>
-                setGetUserEmail(e.target.value)
-              }
-            />
-
-
-            <button
-              className="save-btn"
-              onClick={getUser}
-            >
-              Fetch User
-            </button>
-
-
-            {selectedUser && (
-
-              <div className="user-details">
-
-                <p>
-                  <strong>ID:</strong>{" "}
-                  {selectedUser.id}
-                </p>
-
-                <p>
-                  <strong>Name:</strong>{" "}
-                  {selectedUser.name}
-                </p>
-
-                <p>
-                  <strong>Email:</strong>{" "}
-                  {selectedUser.email}
-                </p>
-
-              </div>
-
-            )}
-
-          </div>
+          <p>
+            <strong>Email:</strong>{" "}
+            {selectedUser.email}
+          </p>
 
         </div>
 
       )}
+
+    </div>
+
+  </div>
+
+)}
 
 
       {/* EDIT USER POPUP */}
@@ -734,11 +714,7 @@ function Products() {
   };
 
 
-  useEffect(() => {
-
-    fetchProducts();
-
-  }, []);
+  
 
 
   // ======================================================
@@ -1778,7 +1754,7 @@ function Orders() {
               setShowSearch(true)
             }
           >
-            Search User
+            Search Orders
           </button>
 
 
@@ -2154,7 +2130,7 @@ function Orders() {
             <div className="modal-header">
 
               <h2>
-                Search User
+                Search Orders
               </h2>
 
 
