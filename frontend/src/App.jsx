@@ -641,32 +641,27 @@ function Products() {
 
   const [showForm, setShowForm] = useState(false);
 
-  const [productName, setProductName] =
-    useState("");
+  const [productName, setProductName] = useState("");
 
-  const [price, setPrice] =
-    useState("");
+  const [price, setPrice] = useState("");
 
-  const [showSearch, setShowSearch] =
-    useState(false);
+  // SEARCH STATE
+  const [showSearch, setShowSearch] = useState(false);
 
   const [productNameSearch, setProductNameSearch] = useState("");
 
-  const [showEditForm, setShowEditForm] =
-    useState(false);
+  // EDIT STATE
+  const [showEditForm, setShowEditForm] = useState(false);
 
-  const [editProductId, setEditProductId] =
-    useState("");
+  const [editProductId, setEditProductId] = useState("");
 
-  const [editProductName, setEditProductName] =
-    useState("");
+  const [editProductName, setEditProductName] = useState("");
 
-  const [editPrice, setEditPrice] =
-    useState("");
+  const [editPrice, setEditPrice] = useState("");
 
 
   // ======================================================
-  // FETCH PRODUCTS
+  // FETCH ALL PRODUCTS
   // ======================================================
 
   const fetchProducts = async () => {
@@ -677,8 +672,12 @@ function Products() {
         `${API_URL}/products`
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.message || "Failed to fetch products");
+        return;
+      }
 
       setProducts(data);
 
@@ -689,57 +688,67 @@ function Products() {
         error
       );
 
+      alert("Failed to fetch products");
+
     }
+
   };
 
 
-  
-
-
   // ======================================================
-  // SEARCH PRODUCT
+  // SEARCH PRODUCT BY NAME
   // ======================================================
 
- const searchProduct = async () => {
+  const searchProduct = async () => {
 
-  if (!productNameSearch.trim()) {
-    alert("Please enter product name");
-    return;
-  }
+    if (!productNameSearch.trim()) {
 
-  try {
+      alert("Please enter product name");
 
-    const response = await fetch(
-      `${API_URL}/products/search?name=${encodeURIComponent(productNameSearch)}`
-    );
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      alert(data.message || "Product not found");
       return;
     }
 
-    // Show searched product in main table
-    setProducts([data]);
+    try {
 
-    // Close popup
-    setShowSearch(false);
+      const response = await fetch(
+        `${API_URL}/products/search?name=${encodeURIComponent(
+          productNameSearch
+        )}`
+      );
 
-    // Clear input
-    setProductNameSearch("");
+      const data = await response.json();
 
-  } catch (error) {
+      if (!response.ok) {
 
-    console.error(
-      "Error searching product:",
-      error
-    );
+        alert(
+          data.message || "Product not found"
+        );
 
-    alert("Product not found");
+        return;
+      }
 
-  }
-};
+      // Show searched product
+      // inside the main products table
+      setProducts([data]);
+
+      // Close search popup
+      setShowSearch(false);
+
+      // Clear search input
+      setProductNameSearch("");
+
+    } catch (error) {
+
+      console.error(
+        "Error searching product:",
+        error
+      );
+
+      alert("Product not found");
+
+    }
+
+  };
 
 
   // ======================================================
@@ -747,6 +756,20 @@ function Products() {
   // ======================================================
 
   const addProduct = async () => {
+
+    if (!productName.trim()) {
+
+      alert("Please enter product name");
+
+      return;
+    }
+
+    if (!price) {
+
+      alert("Please enter price");
+
+      return;
+    }
 
     try {
 
@@ -756,30 +779,39 @@ function Products() {
           method: "POST",
 
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
 
           body: JSON.stringify({
-            product_name:
-              productName,
-
+            product_name: productName,
             price: price
           })
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+
+        alert(
+          data.message ||
+          data.error ||
+          "Failed to add product"
+        );
+
+        return;
+      }
 
       console.log(data);
 
+      // Clear form
       setProductName("");
-
       setPrice("");
 
+      // Close popup
       setShowForm(false);
 
+      // Refresh products
       fetchProducts();
 
     } catch (error) {
@@ -789,7 +821,10 @@ function Products() {
         error
       );
 
+      alert("Failed to add product");
+
     }
+
   };
 
 
@@ -818,6 +853,20 @@ function Products() {
 
   const updateProduct = async () => {
 
+    if (!editProductName.trim()) {
+
+      alert("Please enter product name");
+
+      return;
+    }
+
+    if (!editPrice) {
+
+      alert("Please enter price");
+
+      return;
+    }
+
     try {
 
       const response = await fetch(
@@ -826,26 +875,35 @@ function Products() {
           method: "PUT",
 
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
 
           body: JSON.stringify({
-            product_name:
-              editProductName,
-
+            product_name: editProductName,
             price: editPrice
           })
         }
       );
 
-      const data =
-        await response.json();
+      const data = await response.json();
+
+      if (!response.ok) {
+
+        alert(
+          data.message ||
+          data.error ||
+          "Failed to update product"
+        );
+
+        return;
+      }
 
       console.log(data);
 
+      // Close edit popup
       setShowEditForm(false);
 
+      // Refresh products
       fetchProducts();
 
     } catch (error) {
@@ -855,7 +913,10 @@ function Products() {
         error
       );
 
+      alert("Failed to update product");
+
     }
+
   };
 
 
@@ -895,7 +956,8 @@ function Products() {
 
         throw new Error(
           errorData.error ||
-          errorData.message
+          errorData.message ||
+          "Failed to delete product"
         );
 
       }
@@ -905,6 +967,8 @@ function Products() {
 
       console.log(data);
 
+      // Remove deleted product
+      // from current table
       setProducts(
         (previousProducts) =>
           previousProducts.filter(
@@ -920,7 +984,13 @@ function Products() {
         error
       );
 
+      alert(
+        error.message ||
+        "Failed to delete product"
+      );
+
     }
+
   };
 
 
@@ -937,17 +1007,25 @@ function Products() {
       </h1>
 
 
+      {/* ==================================================
+          BUTTONS
+      ================================================== */}
+
       <div className="button-container">
 
-       <input
-  type="text"
-  placeholder="Enter Product Name"
-  value={productNameSearch}
-  onChange={(e) =>
-    setProductNameSearch(e.target.value)
-  }
-/>
+        {/* SEARCH PRODUCT */}
 
+        <button
+          onClick={() => {
+            setProductNameSearch("");
+            setShowSearch(true);
+          }}
+        >
+          Search Product
+        </button>
+
+
+        {/* ADD PRODUCT */}
 
         <button
           onClick={() =>
@@ -958,6 +1036,8 @@ function Products() {
         </button>
 
 
+        {/* GET ALL PRODUCTS */}
+
         <button
           onClick={fetchProducts}
         >
@@ -967,7 +1047,9 @@ function Products() {
       </div>
 
 
-      {/* SEARCH PRODUCT POPUP */}
+      {/* ==================================================
+          SEARCH PRODUCT POPUP
+      ================================================== */}
 
       {showSearch && (
 
@@ -981,32 +1063,37 @@ function Products() {
                 Search Product
               </h2>
 
-             <button
-  className="close-btn"
-  onClick={() => {
+              <button
+                className="close-btn"
+                onClick={() => {
 
-    setShowSearch(false);
-    setProductNameSearch("");
+                  setShowSearch(false);
 
-  }}
->
-  ×
-</button>
+                  setProductNameSearch("");
+
+                }}
+              >
+                ×
+              </button>
 
             </div>
 
 
+            {/* PRODUCT NAME */}
+
             <input
-              type="number"
-              placeholder="Enter Product ID"
-              value={productId}
+              type="text"
+              placeholder="Enter Product Name"
+              value={productNameSearch}
               onChange={(e) =>
-                setProductId(
+                setProductNameSearch(
                   e.target.value
                 )
               }
             />
 
+
+            {/* SEARCH BUTTON */}
 
             <button
               className="save-btn"
@@ -1022,7 +1109,9 @@ function Products() {
       )}
 
 
-      {/* ADD PRODUCT POPUP */}
+      {/* ==================================================
+          ADD PRODUCT POPUP
+      ================================================== */}
 
       {showForm && (
 
@@ -1048,6 +1137,8 @@ function Products() {
             </div>
 
 
+            {/* PRODUCT NAME */}
+
             <input
               type="text"
               placeholder="Enter product name"
@@ -1060,6 +1151,8 @@ function Products() {
             />
 
 
+            {/* PRICE */}
+
             <input
               type="number"
               placeholder="Enter price"
@@ -1071,6 +1164,8 @@ function Products() {
               }
             />
 
+
+            {/* SAVE */}
 
             <button
               className="save-btn"
@@ -1086,7 +1181,9 @@ function Products() {
       )}
 
 
-      {/* EDIT PRODUCT POPUP */}
+      {/* ==================================================
+          EDIT PRODUCT POPUP
+      ================================================== */}
 
       {showEditForm && (
 
@@ -1112,12 +1209,16 @@ function Products() {
             </div>
 
 
+            {/* PRODUCT ID */}
+
             <input
               type="text"
               value={editProductId}
               disabled
             />
 
+
+            {/* PRODUCT NAME */}
 
             <input
               type="text"
@@ -1131,6 +1232,8 @@ function Products() {
             />
 
 
+            {/* PRICE */}
+
             <input
               type="number"
               placeholder="Price"
@@ -1142,6 +1245,8 @@ function Products() {
               }
             />
 
+
+            {/* UPDATE */}
 
             <button
               className="save-btn"
@@ -1157,7 +1262,9 @@ function Products() {
       )}
 
 
-      {/* PRODUCTS TABLE */}
+      {/* ==================================================
+          PRODUCTS TABLE
+      ================================================== */}
 
       <div className="table-container">
 
@@ -1167,7 +1274,9 @@ function Products() {
 
             <tr>
 
-              <th>ID</th>
+              <th>
+                ID
+              </th>
 
               <th>
                 Product Name
@@ -1256,8 +1365,8 @@ function Products() {
     </div>
 
   );
-}
 
+}
 
 // ======================================================
 // ORDERS
