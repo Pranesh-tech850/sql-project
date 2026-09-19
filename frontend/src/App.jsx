@@ -37,10 +37,10 @@ function Users() {
   const [email, setEmail] = useState("");
 
   const [showGetUser, setShowGetUser] = useState(false);
-  const [userId, setUserId] = useState("");
+  
   const [getUserEmail, setGetUserEmail] = useState("");
 
-  const [selectedUser, setSelectedUser] = useState(null);
+ 
 
   const [showEditForm, setShowEditForm] = useState(false);
   const [editUserId, setEditUserId] = useState("");
@@ -83,7 +83,7 @@ function Users() {
   // GET PARTICULAR USER
   // ======================================================
 
- const getUser = async () => {
+const getUser = async () => {
 
   if (!getUserEmail.trim()) {
     alert("Please enter email");
@@ -99,18 +99,24 @@ function Users() {
     const data = await response.json();
 
     if (!response.ok) {
-      setSelectedUser(null);
       alert(data.message || "User not found");
       return;
     }
 
-    setSelectedUser(data);
+    // Show only the searched user in the main table
+    setUsers([data]);
+
+    // Close popup
+    setShowGetUser(false);
+
+    // Clear search field
+    setGetUserEmail("");
 
   } catch (error) {
 
     console.error("GET USER ERROR:", error);
 
-    setSelectedUser(null);
+    alert("Failed to search user");
 
   }
 };
@@ -412,7 +418,7 @@ function Users() {
 
       {/* GET USER POPUP */}
 
-      {showGetUser && (
+ {showGetUser && (
 
   <div className="modal-overlay">
 
@@ -429,7 +435,6 @@ function Users() {
           onClick={() => {
 
             setShowGetUser(false);
-            setSelectedUser(null);
             setGetUserEmail("");
 
           }}
@@ -455,36 +460,11 @@ function Users() {
         Fetch User
       </button>
 
-      {selectedUser && (
-
-        <div className="user-details">
-
-          <p>
-            <strong>ID:</strong>{" "}
-            {selectedUser.id}
-          </p>
-
-          <p>
-            <strong>Name:</strong>{" "}
-            {selectedUser.name}
-          </p>
-
-          <p>
-            <strong>Email:</strong>{" "}
-            {selectedUser.email}
-          </p>
-
-        </div>
-
-      )}
-
     </div>
 
   </div>
 
 )}
-
-
       {/* EDIT USER POPUP */}
 
       {showEditForm && (
@@ -670,8 +650,7 @@ function Products() {
   const [showSearch, setShowSearch] =
     useState(false);
 
-  const [productId, setProductId] =
-    useState("");
+  const [productNameSearch, setProductNameSearch] = useState("");
 
   const [showEditForm, setShowEditForm] =
     useState(false);
@@ -721,40 +700,46 @@ function Products() {
   // SEARCH PRODUCT
   // ======================================================
 
-  const searchProduct = async () => {
+ const searchProduct = async () => {
 
-    try {
+  if (!productNameSearch.trim()) {
+    alert("Please enter product name");
+    return;
+  }
 
-      const response = await fetch(
-        `${API_URL}/products/search?id=${productId}`
-      );
+  try {
 
-      if (!response.ok) {
-        throw new Error(
-          "Product not found"
-        );
-      }
+    const response = await fetch(
+      `${API_URL}/products/search?name=${encodeURIComponent(productNameSearch)}`
+    );
 
-      const data =
-        await response.json();
+    const data = await response.json();
 
-      setProducts([data]);
-
-      setShowSearch(false);
-
-      setProductId("");
-
-    } catch (error) {
-
-      console.error(
-        "Error searching product:",
-        error
-      );
-
-      alert("Product not found");
-
+    if (!response.ok) {
+      alert(data.message || "Product not found");
+      return;
     }
-  };
+
+    // Show searched product in main table
+    setProducts([data]);
+
+    // Close popup
+    setShowSearch(false);
+
+    // Clear input
+    setProductNameSearch("");
+
+  } catch (error) {
+
+    console.error(
+      "Error searching product:",
+      error
+    );
+
+    alert("Product not found");
+
+  }
+};
 
 
   // ======================================================
@@ -954,13 +939,14 @@ function Products() {
 
       <div className="button-container">
 
-        <button
-          onClick={() =>
-            setShowSearch(true)
-          }
-        >
-          Search Product
-        </button>
+       <input
+  type="text"
+  placeholder="Enter Product Name"
+  value={productNameSearch}
+  onChange={(e) =>
+    setProductNameSearch(e.target.value)
+  }
+/>
 
 
         <button
@@ -995,18 +981,17 @@ function Products() {
                 Search Product
               </h2>
 
-              <button
-                className="close-btn"
-                onClick={() => {
+             <button
+  className="close-btn"
+  onClick={() => {
 
-                  setShowSearch(false);
+    setShowSearch(false);
+    setProductNameSearch("");
 
-                  setProductId("");
-
-                }}
-              >
-                ×
-              </button>
+  }}
+>
+  ×
+</button>
 
             </div>
 

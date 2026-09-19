@@ -344,14 +344,21 @@ app.put("/products/:id", (req, res) => {
 
 app.get("/products/search", (req, res) => {
 
-    const { id } = req.query;
+    const { name } = req.query;
+
+    if (!name) {
+        return res.status(400).json({
+            message: "Please provide product name"
+        });
+    }
 
     const sql = `
-        SELECT * FROM products
-        WHERE id = ?
+        SELECT *
+        FROM products
+        WHERE product_name = ?
     `;
 
-    db.query(sql, [id], (err, results) => {
+    db.query(sql, [name], (err, results) => {
 
         if (err) {
             return res.status(500).json({
