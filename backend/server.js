@@ -637,101 +637,46 @@ app.get("/balance", (req, res) => {
 // =====================================================
 // BUY PRODUCT
 // =====================================================
+app.post("/buy/:balanceid", (req, res) => {
 
-app.post("/buy", (req, res) => {
+      const { quantity } = req.body;
 
-    const {
-        balance_id,
-        product_id,
-        product_name,
+    const balance_id = req.params.balance_id;
 
-        seller_name,
-        seller_email,
+    console.log("🔥 BUY ENDPOINT HIT");
+    console.log("Balance ID:", balance_id);
+    console.log("Quantity:", quantity);
 
-        buyer_id,
-        buyer_name,
-        buyer_email,
+    const requestedQuantity = Number(quantity);
 
-        quantity,
-        price
-    } = req.body;
-
-
-    // =================================================
-    // VALIDATION
-    // =================================================
-
-    if (!balance_id) {
-
-        return res.status(400).json({
-            message: "Balance ID is required"
-        });
-    }
-
-
-    if (!quantity || quantity <= 0) {
-
+    if (
+        !Number.isInteger(requestedQuantity) ||
+        requestedQuantity <= 0
+    ) {
         return res.status(400).json({
             message: "Invalid quantity"
         });
     }
 
+    db.getConnection((err, connection) => {
 
-    if (!buyer_name || !buyer_email) {
-
-        return res.status(400).json({
-            message: "Buyer login information is required"
-        });
-    }
-
-
-    // =================================================
-    // GET A DEDICATED CONNECTION FROM POOL
-    // =================================================
-
-    db.getConnection((connectionError, connection) => {
-
-        if (connectionError) {
-
-            console.error(
-                "GET CONNECTION ERROR:",
-                connectionError
-            );
-
+        if (err) {
             return res.status(500).json({
-                message: "Could not get database connection",
-                error: connectionError.message
+                message: "Database connection failed"
             });
         }
 
+        connection.beginTransaction((err) => {
 
-        // =================================================
-        // START TRANSACTION
-        // =================================================
-
-        connection.beginTransaction((transactionError) => {
-
-            if (transactionError) {
-
+            if (err) {
                 connection.release();
 
-                console.error(
-                    "TRANSACTION ERROR:",
-                    transactionError
-                );
-
                 return res.status(500).json({
-                    message: "Could not start transaction",
-                    error: transactionError.message
+                    message: "Transaction failed"
                 });
             }
 
-
-            // =================================================
-            // LOCK BALANCE ROW
-            // =================================================
-
-            const lockSql = `
+            const sql = `
                 SELECT *
                 FROM balance
                 WHERE id = ?
@@ -739,157 +684,82 @@ app.post("/buy", (req, res) => {
             `;
 
             connection.query(
-                lockSql,
+                sql,
                 [balance_id],
-                (lockError, rows) => {
+                (err, rows) => {
 
-                    if (lockError) {
-
+                    if (err) {
                         return connection.rollback(() => {
-
                             connection.release();
 
-                            console.error(
-                                "LOCK ERROR:",
-                                lockError
-                            );
-
                             res.status(500).json({
-                                message:
-                                    "Failed to check product stock",
-                                error:
-                                    lockError.message
+                                message: "Failed to check stock"
                             });
                         });
                     }
 
-
-                    // =================================================
-                    // PRODUCT NOT FOUND
-                    // =================================================
-
                     if (rows.length === 0) {
-
                         return connection.rollback(() => {
-
                             connection.release();
 
                             res.status(404).json({
-                                message:
-                                    "Product is no longer available"
+                                message: "Product not found"
                             });
                         });
                     }
 
-
                     const product = rows[0];
-
 
                     const availableQuantity =
                         Number(product.quantity);
 
-                    const requestedQuantity =
-                        Number(quantity);
-
-
-                    // =================================================
-                    // CHECK STOCK
-                    // =================================================
-
-                    if (
-                        availableQuantity <
-                        requestedQuantity
-                    ) {
-
+                    if (requestedQuantity > availableQuantity) {
                         return connection.rollback(() => {
-
                             connection.release();
 
-                            res.status(409).json({
+                            res.status(400).json({
                                 message:
                                     `Only ${availableQuantity} items are available.`
                             });
                         });
                     }
 
-
-                    // =================================================
-                    // REMAINING QUANTITY
-                    // =================================================
-
                     const remainingQuantity =
-                        availableQuantity -
-                        requestedQuantity;
-
-
-                    // =================================================
-                    // INSERT ORDER
-                    // =================================================
+                        availableQuantity - requestedQuantity;
 
                     const orderSql = `
                         INSERT INTO orders
                         (
-                            user_id,
                             product_id,
                             quantity,
-                            user_name,
-                            user_email,
                             product_name,
                             product_price
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        VALUES (?, ?, ?, ?)
                     `;
 
-
                     const orderValues = [
-
-                        buyer_id,
-
-                        product_id,
-
+                        product.product_id || null,
                         requestedQuantity,
-
-                        buyer_name,
-
-                        buyer_email,
-
-                        product_name ||
                         product.product_name,
-
-                        price ||
                         product.price
                     ];
-
 
                     connection.query(
                         orderSql,
                         orderValues,
-                        (orderError, orderResult) => {
+                        (err, result) => {
 
-                            if (orderError) {
-
+                            if (err) {
                                 return connection.rollback(() => {
-
                                     connection.release();
 
-                                    console.error(
-                                        "ORDER INSERT ERROR:",
-                                        orderError
-                                    );
-
                                     res.status(500).json({
-                                        message:
-                                            "Failed to create order",
-                                        error:
-                                            orderError.message
+                                        message: "Failed to create order",
+                                        error: err.message
                                     });
                                 });
                             }
-
-
-                            // =================================================
-                            // SOLD OUT
-                            // =================================================
 
                             if (remainingQuantity === 0) {
 
@@ -898,93 +768,51 @@ app.post("/buy", (req, res) => {
                                     WHERE id = ?
                                 `;
 
-
                                 connection.query(
                                     deleteSql,
                                     [balance_id],
-                                    (deleteError) => {
+                                    (err) => {
 
-                                        if (deleteError) {
+                                        if (err) {
+                                            return connection.rollback(() => {
+                                                connection.release();
 
-                                            return connection.rollback(
-                                                () => {
+                                                res.status(500).json({
+                                                    message:
+                                                        "Failed to remove product"
+                                                });
+                                            });
+                                        }
 
+                                        connection.commit((err) => {
+
+                                            if (err) {
+                                                return connection.rollback(() => {
                                                     connection.release();
-
-                                                    console.error(
-                                                        "DELETE BALANCE ERROR:",
-                                                        deleteError
-                                                    );
 
                                                     res.status(500).json({
                                                         message:
-                                                            "Failed to remove sold-out product",
-                                                        error:
-                                                            deleteError.message
+                                                            "Purchase failed"
                                                     });
-                                                }
-                                            );
-                                        }
-
-
-                                        // =================================================
-                                        // COMMIT
-                                        // =================================================
-
-                                        connection.commit(
-                                            (commitError) => {
-
-                                                if (commitError) {
-
-                                                    return connection.rollback(
-                                                        () => {
-
-                                                            connection.release();
-
-                                                            console.error(
-                                                                "COMMIT ERROR:",
-                                                                commitError
-                                                            );
-
-                                                            res.status(500).json({
-                                                                message:
-                                                                    "Failed to complete purchase",
-                                                                error:
-                                                                    commitError.message
-                                                            });
-                                                        }
-                                                    );
-                                                }
-
-
-                                                connection.release();
-
-
-                                                res.status(201).json({
-
-                                                    message:
-                                                        "Product sold successfully",
-
-                                                    orderId:
-                                                        orderResult.insertId,
-
-                                                    remainingQuantity:
-                                                        0,
-
-                                                    soldOut:
-                                                        true
                                                 });
                                             }
-                                        );
+
+                                            connection.release();
+
+                                            res.status(201).json({
+                                                message:
+                                                    "Product purchased successfully",
+                                                orderId:
+                                                    result.insertId,
+                                                remainingQuantity: 0,
+                                                soldOut: true
+                                            });
+
+                                        });
                                     }
                                 );
 
-
                             } else {
-
-                                // =================================================
-                                // UPDATE BALANCE
-                                // =================================================
 
                                 const updateSql = `
                                     UPDATE balance
@@ -992,87 +820,50 @@ app.post("/buy", (req, res) => {
                                     WHERE id = ?
                                 `;
 
-
                                 connection.query(
                                     updateSql,
                                     [
                                         remainingQuantity,
                                         balance_id
                                     ],
-                                    (updateError) => {
+                                    (err) => {
 
-                                        if (updateError) {
+                                        if (err) {
+                                            return connection.rollback(() => {
+                                                connection.release();
 
-                                            return connection.rollback(
-                                                () => {
+                                                res.status(500).json({
+                                                    message:
+                                                        "Failed to update balance"
+                                                });
+                                            });
+                                        }
 
+                                        connection.commit((err) => {
+
+                                            if (err) {
+                                                return connection.rollback(() => {
                                                     connection.release();
-
-                                                    console.error(
-                                                        "UPDATE BALANCE ERROR:",
-                                                        updateError
-                                                    );
 
                                                     res.status(500).json({
                                                         message:
-                                                            "Failed to update balance",
-                                                        error:
-                                                            updateError.message
+                                                            "Purchase failed"
                                                     });
-                                                }
-                                            );
-                                        }
-
-
-                                        // =================================================
-                                        // COMMIT
-                                        // =================================================
-
-                                        connection.commit(
-                                            (commitError) => {
-
-                                                if (commitError) {
-
-                                                    return connection.rollback(
-                                                        () => {
-
-                                                            connection.release();
-
-                                                            console.error(
-                                                                "COMMIT ERROR:",
-                                                                commitError
-                                                            );
-
-                                                            res.status(500).json({
-                                                                message:
-                                                                    "Purchase failed",
-                                                                error:
-                                                                    commitError.message
-                                                            });
-                                                        }
-                                                    );
-                                                }
-
-
-                                                connection.release();
-
-
-                                                res.status(201).json({
-
-                                                    message:
-                                                        "Product purchased successfully",
-
-                                                    orderId:
-                                                        orderResult.insertId,
-
-                                                    remainingQuantity:
-                                                        remainingQuantity,
-
-                                                    soldOut:
-                                                        false
                                                 });
                                             }
-                                        );
+
+                                            connection.release();
+
+                                            res.status(201).json({
+                                                message:
+                                                    "Product purchased successfully",
+                                                orderId:
+                                                    result.insertId,
+                                                remainingQuantity,
+                                                soldOut: false
+                                            });
+
+                                        });
                                     }
                                 );
                             }
@@ -1104,6 +895,13 @@ app.get("/", (req, res) => {
 
 const PORT = process.env.PORT || 5000;
 
+app.get("/version", (req, res) => {
+    res.json({
+        version: "BUY-FIX-2026",
+        message: "New backend is running",
+        buyLoginRequired: false
+    });
+});
 app.listen(PORT, "0.0.0.0", () => {
 
     console.log(`Server running on port ${PORT}`);
